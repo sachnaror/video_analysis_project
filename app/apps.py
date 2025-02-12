@@ -1,6 +1,9 @@
-from django.apps import AppConfig
+from django.urls import path
 
+from . import views
 
-class AppConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'app'
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('process_video/', views.process_video, name='process_video'),
+    path('chat/', views.chat, name='chat'),
+]
