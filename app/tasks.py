@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import time
 
 import cv2
@@ -29,16 +30,19 @@ for folder in [UPLOADS_DIR, FRAMES_DIR, TRANSCRIPTS_DIR, ANALYSIS_DIR]:
 
 # ✅ Load Whisper Model (Speech-to-Text)
 whisper_model = whisper.load_model("base")
-
 # ✅ Load YOLOv8 Model (Object Detection)
-yolo_model = YOLO("yolov8n.pt")  # Using YOLOv8 nano model (lightweight)
+yolo_model = YOLO("yolov8n.pt")
 
-# ✅ Update Progress Utility
+# ✅ Prevent Race Conditions in Progress Updates
+progress_lock = threading.Lock()
+
 def update_progress(progress, stage, report_ready=False):
-    """Write progress status to JSON file"""
+    """Thread-safe function to update progress status"""
     progress_file = os.path.join(MEDIA_DIR, "progress.json")
-    with open(progress_file, "w") as f:
-        json.dump({"progress": progress, "stage": stage, "report_ready": report_ready}, f)
+
+    with progress_lock:
+        with open(progress_file, "w") as f:
+            json.dump({"progress": progress, "stage": stage, "report_ready": report_ready}, f)
 
 @shared_task
 def process_video_task(video_filename):
@@ -69,7 +73,7 @@ def process_video_task(video_filename):
         audio_path = video_path.replace(".mp4", ".wav")
         clip = VideoFileClip(video_path)
 
-        if clip.audio:  # ✅ Check if video contains audio before extracting
+        if clip.audio is not None:
             clip.audio.write_audiofile(audio_path)
             transcript_text = whisper_model.transcribe(audio_path)["text"]
 
@@ -85,15 +89,14 @@ def process_video_task(video_filename):
     ocr_text = ""
 
     def preprocess_image(img_path):
-        """Pre-process image for better OCR results"""
         img = cv2.imread(img_path)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-        return thresh  # ✅ Return processed image
+        return thresh
 
     for img_file in os.listdir(FRAMES_DIR):
         img_path = os.path.join(FRAMES_DIR, img_file)
-        processed_img = preprocess_image(img_path)  # ✅ Preprocess before OCR
+        processed_img = preprocess_image(img_path)
         text = pytesseract.image_to_string(processed_img)
         ocr_text += text.strip() + "\n"
 
@@ -111,27 +114,22 @@ def process_video_task(video_filename):
         except Exception as e:
             print(f"YOLO Detection Error on {img_file}: {str(e)}")
 
-    detected_objects = list(set(detected_objects))  # ✅ Remove duplicates
+    detected_objects = list(set(detected_objects))
 
     # ✅ Step 5: Apply NLP for Video Analysis
     update_progress(90, "Running NLP-based analysis...")
     summary = "No summary available."
 
     try:
-        nlp_pipeline = pipeline("summarization")
+        nlp_pipeline = pipeline("summarization", model="facebook/bart-large-cnn")
         summary = nlp_pipeline(transcript_text[:1000], max_length=150, min_length=50, do_sample=False)[0]["summary_text"]
 
     except Exception as e:
         print(f"NLP Summarization Error: {str(e)}")
 
-    # ✅ Step 6: Save Processed Data
+    # ✅ Save to Database
     analysis_text = f"Summary: {summary}\n\nExtracted Text: {ocr_text}\n\nObjects Detected: {', '.join(detected_objects)}"
 
-    analysis_path = os.path.join(ANALYSIS_DIR, f"{video_filename}_analysis.txt")
-    with open(analysis_path, "w") as f:
-        f.write(analysis_text)
-
-    # ✅ Save to Database (Ensuring Atomic Transactions)
     with transaction.atomic():
         VideoAnalysis.objects.create(
             video_name=video_filename,
