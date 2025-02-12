@@ -139,3 +139,17 @@ def process_video_task(video_filename):
 
     update_progress(100, "Processing complete! Report ready.", report_ready=True)
     return "Processing Completed"
+
+import json
+import os
+
+MEDIA_DIR = "media"
+PROGRESS_FILE = os.path.join(MEDIA_DIR, "progress.json")
+
+def get_progress_data():
+    """Read progress status from progress.json"""
+    if not os.path.exists(PROGRESS_FILE):
+        return {"progress": 0, "stage": "Waiting for processing...", "report_ready": False}
+
+    with open(PROGRESS_FILE, "r") as f:
+        return json.load(f)

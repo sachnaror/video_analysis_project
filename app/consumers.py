@@ -12,10 +12,10 @@ class ProgressConsumer(AsyncWebsocketConsumer):
     """WebSocket Consumer for Real-Time Progress Updates"""
 
     async def connect(self):
-        """Accept WebSocket connection and start sending updates"""
+        """Accept WebSocket connection and send initial progress"""
         await self.accept()
-        await self.send(json.dumps({"progress": 0, "stage": "Waiting for processing..."}))
-        await self.send_progress_updates()
+        progress_data = get_progress_data()
+        await self.send(json.dumps(progress_data))
 
     async def send_progress_updates(self):
         """Continuously send real-time progress updates"""

@@ -1,4 +1,29 @@
 $(document).ready(() => {
+
+    const savedApiKey = sessionStorage.getItem("openai_api_key");
+
+    if (savedApiKey) {
+        $("#apiKey").val(savedApiKey);
+        $("#apiKeyStatus").text("✅ API Key saved!").removeClass("d-none").addClass("text-success");
+    }
+
+    $("#saveKey").click(() => {
+        let apiKey = $("#apiKey").val().trim();
+        if (apiKey) {
+            sessionStorage.setItem("openai_api_key", apiKey);
+
+            // ✅ Show confirmation message
+            $("#apiKeyStatus").text("✅ API Key saved successfully!").removeClass("d-none").addClass("text-success");
+
+            setTimeout(() => {
+                $("#apiKeyStatus").fadeOut();  // Hide message after 3 seconds
+            }, 3000);
+        } else {
+            $("#apiKeyStatus").text("❌ Please enter a valid API Key!").removeClass("d-none").addClass("text-danger");
+        }
+    });
+
+
     let socket;
 
     function connectWebSocket() {
