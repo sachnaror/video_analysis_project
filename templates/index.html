@@ -58,7 +58,39 @@
         </div>
     </div>
 
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="videoFile" name="video" required>
+        <button type="submit">Upload & Process</button>
+    </form>
+
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+    <script>
+    document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        let fileInput = document.getElementById("videoFile");
+        if (!fileInput.files.length) {
+            alert("Please select a video file.");
+            return;
+        }
+
+        let formData = new FormData();
+        formData.append("video", fileInput.files[0]);
+
+        let response = await fetch("/upload_video/", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await response.json();
+        alert(data.message || data.error);
+    });
+    </script>
+
+
     <script>
         function scrollToBottom() {
             let chatBox = document.getElementById("chatHistory");
@@ -122,5 +154,29 @@
             scrollToBottom();
         });
     </script>
+
+    <input type="file" id="fileInput">
+<button id="uploadFileBtn">Upload File</button>
+
+<script>
+$("#uploadFileBtn").click(async () => {
+    let fileInput = document.getElementById("fileInput");
+    if (!fileInput.files.length) {
+        alert("Please select a file.");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    let response = await fetch("/upload_file/", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await response.json();
+    alert(data.message || data.error);
+});
+</script>
 </body>
 </html>

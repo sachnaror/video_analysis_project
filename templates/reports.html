@@ -1,0 +1,9 @@
+<h2>Processed Video Reports</h2>
+<ul>
+    {% for report in reports %}
+        <li>
+            <strong>{{ report.video_name }}</strong> -
+            <a href="{% url 'view_report_detail' report.id %}">View Report</a>
+        </li>
+    {% endfor %}
+</ul>
