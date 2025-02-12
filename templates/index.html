@@ -20,7 +20,7 @@
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar (Maintaining Configuration UI) -->
+            <!-- Sidebar -->
             <div class="col-md-3 sidebar">
                 <h4>🔧 Configuration</h4>
                 <label for="apiKey" class="form-label">OpenAI API Key</label>
@@ -33,107 +33,108 @@
                 <h2>🎥 AI Video Analysis</h2>
                 <p>Upload a video for AI-powered analysis.</p>
 
-                <div class="mb-3">
-                    <label for="videoInput" class="form-label">Upload Video</label>
-                    <input type="file" id="videoInput" class="form-control" accept="video/*">
-                </div>
-                <button id="processVideoBtn" class="btn btn-primary">🔍 Process Video</button>
-
-
-
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <label for="videoFile" class="form-label">Upload Video</label>
+                    <input type="file" id="videoFile" name="video" class="form-control" accept="video/*" required>
+                    <button type="submit" class="btn btn-primary mt-2">📤 Upload & Process</button>
+                </form>
 
                 <div class="progress mt-3 d-none">
                     <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
                          role="progressbar" style="width: 0%;">0%</div>
                 </div>
-                <p id="progressStage" class="text-info mt-2">Waiting for processing...</p>  <!-- ✅ Added -->
+                <p id="progressStage" class="text-info mt-2">Waiting for processing...</p>
 
+                <!-- Chat Section -->
                 <div id="chat-section" class="d-none">
                     <h4>💬 Chat History</h4>
                     <div class="chat-box" id="chatHistory"></div>
                     <input type="text" id="userQuery" class="form-control mb-2" placeholder="Ask about the video">
                     <button id="askBtn" class="btn btn-warning">Ask</button>
                 </div>
+
+                <!-- File Upload Section -->
+                <h4 class="mt-4">📄 Upload Other Files (PDFs, Images)</h4>
+                <input type="file" id="fileInput">
+                <button id="uploadFileBtn" class="btn btn-secondary">Upload File</button>
             </div>
         </div>
     </div>
 
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="videoFile" name="video" required>
-        <button type="submit">Upload & Process</button>
-    </form>
-
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-
     <script>
-    document.getElementById("uploadForm").addEventListener("submit", async (event) => {
-        event.preventDefault();
+    $(document).ready(() => {
+        let progressSocket, chatSocket;
 
-        let fileInput = document.getElementById("videoFile");
-        if (!fileInput.files.length) {
-            alert("Please select a video file.");
-            return;
-        }
+        // ✅ WebSocket for real-time progress updates
+        function connectProgressWebSocket() {
+            progressSocket = new WebSocket("ws://127.0.0.1:8000/ws/progress/");
 
-        let formData = new FormData();
-        formData.append("video", fileInput.files[0]);
+            progressSocket.onopen = () => console.log("Progress WebSocket connected.");
 
-        let response = await fetch("/upload_video/", {
-            method: "POST",
-            body: formData
-        });
+            progressSocket.onmessage = (event) => {
+                let data = JSON.parse(event.data);
+                let progressValue = data.progress;
+                let progressStage = data.stage;
+                let reportReady = data.report_ready;
 
-        let data = await response.json();
-        alert(data.message || data.error);
-    });
-    </script>
+                $(".progress").removeClass("d-none");
+                $("#progressBar").css("width", progressValue + "%").text(progressValue + "%");
+                $("#progressStage").text(progressStage);
 
-
-    <script>
-        function scrollToBottom() {
-            let chatBox = document.getElementById("chatHistory");
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        // Load API Key from sessionStorage when page loads
-        $(document).ready(() => {
-            const savedApiKey = sessionStorage.getItem("openai_api_key");
-            if (savedApiKey) {
-                $("#apiKey").val(savedApiKey);
-            }
-        });
-
-        // Save API Key in sessionStorage
-        $("#saveKey").click(() => {
-            let apiKey = $("#apiKey").val().trim();
-            if (apiKey) {
-                sessionStorage.setItem("openai_api_key", apiKey);
-                alert("API Key saved for this session!");
-            } else {
-                alert("Please enter a valid API Key.");
-            }
-        });
-
-        $("#processVideoBtn").click(() => {
-            $(".progress").removeClass("d-none");
-
-            let interval = setInterval(async () => {
-                let response = await fetch('/progress');
-                let data = await response.json();
-                let progress = data.progress;
-
-                $("#progressBar").css("width", progress + "%").text(progress + "%");
-
-                if (progress >= 100) {
-                    clearInterval(interval);
+                if (reportReady) {
                     $("#chat-section").removeClass("d-none");
                 }
-            }, 2000);
+            };
+
+            progressSocket.onclose = () => {
+                console.warn("Progress WebSocket closed. Reconnecting in 3 seconds...");
+                setTimeout(connectProgressWebSocket, 3000);
+            };
+        }
+
+        // ✅ WebSocket for real-time chat
+        function connectChatWebSocket() {
+            chatSocket = new WebSocket("ws://127.0.0.1:8000/ws/chat/");
+
+            chatSocket.onopen = () => console.log("Chat WebSocket connected.");
+
+            chatSocket.onmessage = (event) => {
+                let data = JSON.parse(event.data);
+                $("#chatHistory").append(`<div class='chat-message ai-message'>${data.response || data.error}</div>`);
+                scrollToBottom();
+            };
+
+            chatSocket.onclose = () => {
+                console.warn("Chat WebSocket closed. Reconnecting in 3 seconds...");
+                setTimeout(connectChatWebSocket, 3000);
+            };
+        }
+
+        connectProgressWebSocket();
+        connectChatWebSocket();
+
+        // ✅ Video Upload & Processing
+        $("#uploadForm").submit(async (event) => {
+            event.preventDefault();
+            let fileInput = $("#videoFile")[0].files[0];
+            if (!fileInput) return alert("Please select a video file.");
+
+            let formData = new FormData();
+            formData.append("video", fileInput);
+
+            let response = await fetch("/upload_video/", {
+                method: "POST",
+                body: formData
+            });
+
+            let data = await response.json();
+            alert(data.message || data.error);
         });
 
-        $("#askBtn").click(async () => {
+        // ✅ Chat Functionality
+        $("#askBtn").click(() => {
             let query = $("#userQuery").val().trim();
             let apiKey = sessionStorage.getItem("openai_api_key");
 
@@ -141,42 +142,29 @@
             if (!apiKey) return alert("Please enter and save your API Key!");
 
             $("#chatHistory").append(`<div class='chat-message user-message'>${query}</div>`);
+            $("#userQuery").val("");
             scrollToBottom();
 
-            let response = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: query, api_key: apiKey })
-            });
-
-            let data = await response.json();
-            $("#chatHistory").append(`<div class='chat-message ai-message'>${data.response}</div>`);
-            scrollToBottom();
+            chatSocket.send(JSON.stringify({ question: query, api_key: apiKey }));
         });
-    </script>
 
-    <input type="file" id="fileInput">
-<button id="uploadFileBtn">Upload File</button>
+        // ✅ File Upload
+        $("#uploadFileBtn").click(async () => {
+            let fileInput = $("#fileInput")[0].files[0];
+            if (!fileInput) return alert("Please select a file.");
 
-<script>
-$("#uploadFileBtn").click(async () => {
-    let fileInput = document.getElementById("fileInput");
-    if (!fileInput.files.length) {
-        alert("Please select a file.");
-        return;
-    }
+            let formData = new FormData();
+            formData.append("file", fileInput);
 
-    let formData = new FormData();
-    formData.append("file", fileInput.files[0]);
+            let response = await fetch("/upload_file/", { method: "POST", body: formData });
+            let data = await response.json();
+            alert(data.message || data.error);
+        });
 
-    let response = await fetch("/upload_file/", {
-        method: "POST",
-        body: formData
+        function scrollToBottom() {
+            setTimeout(() => $("#chatHistory").scrollTop($("#chatHistory")[0].scrollHeight), 100);
+        }
     });
-
-    let data = await response.json();
-    alert(data.message || data.error);
-});
-</script>
+    </script>
 </body>
 </html>
