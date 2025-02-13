@@ -20,6 +20,11 @@ pip-delete-this-directory.txt
 *.sublime-workspace
 *.sublime-project
 
+/Users/homesachin/Desktop/zoneone/video_analysis_project/media
+video_analysis_project/media
+media/
+video_analysis_project/
+
 # OS-specific files
 .DS_Store
 Thumbs.db
