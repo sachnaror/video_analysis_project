@@ -206,3 +206,7 @@ redis-server &
 python manage.py runserver &
 celery -A config worker --loglevel=info &
 ```
+
+
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/c8acf8e0-fd32-4d9d-95a4-f9a4344f2648" />
+
