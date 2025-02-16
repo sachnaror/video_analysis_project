@@ -1,5 +1,22 @@
 # 🎥 AI-Powered Video Analysis System
 
+
+## Commands:
+
+To stop existing processes, run:
+
+```bash
+pkill -f runserver
+pkill -f redis
+pkill -f celery
+
+```
+redis-server &
+python manage.py runserver &
+celery -A config worker --loglevel=info &
+```
+
+
 🚀 **AI-based Video Processing & Analysis System** with **Django, Celery, WebSockets, OpenAI GPT-4, Whisper, OCR, and YOLOv8** for **video transcript generation, object detection, speech-to-text, and AI-powered chat**.
 
 ## 📌 Features
