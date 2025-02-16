@@ -190,3 +190,19 @@ daphne -b 0.0.0.0 -p 8000 config.asgi:application
 🌐 **Website:** [https://about.me/sachin-arora](https://about.me/sachin-arora)
 
 🚀 **Happy Coding!** 🎬💡
+
+## Commands:
+
+First, stop existing processes, run:
+
+```bash
+pkill -f runserver
+pkill -f redis
+pkill -f celery
+
+### and then..
+
+redis-server &
+python manage.py runserver &
+celery -A config worker --loglevel=info &
+```
