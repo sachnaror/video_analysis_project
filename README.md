@@ -207,6 +207,19 @@ python manage.py runserver &
 celery -A config worker --loglevel=info &
 ```
 
+# 1️⃣ Restart Redis
+brew services restart redis
+
+# 2️⃣ Apply migrations
+python manage.py makemigrations
+python manage.py migrate
+
+# 3️⃣ Start Celery Worker
+celery -A config worker --loglevel=info
+
+# 4️⃣ Restart Django ASGI Server
+daphne -b 0.0.0.0 -p 8000 config.asgi:application
+
 
 <img width="600" alt="image" src="https://github.com/user-attachments/assets/c8acf8e0-fd32-4d9d-95a4-f9a4344f2648" />
 
