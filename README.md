@@ -6,12 +6,19 @@
 🚀 **AI-based Video Processing & Analysis System** with **Django, Celery, WebSockets, OpenAI GPT-4, Whisper, OCR, and YOLOv8** for **video transcript generation, object detection, speech-to-text, and AI-powered chat**.
 
 ## 📌 Features
+
 ✅ **Upload & Process Videos** – Extract audio, text, and objects
+
 ✅ **Real-time Progress Updates** – WebSockets for instant feedback
+
 ✅ **AI Chat** – Ask questions about the processed video
+
 ✅ **Multi-user API Key Support** – Users enter their own OpenAI API key
+
 ✅ **Database Storage** – Save transcripts & analysis reports
+
 ✅ **WebSocket-powered Chat** – Realtime AI Q&A
+
 ✅ **Download Reports** – Transcripts & analysis reports available
 
 ---
